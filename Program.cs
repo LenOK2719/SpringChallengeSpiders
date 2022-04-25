@@ -55,19 +55,32 @@ class Player
                 };
                 CurrentState.Entities.Add(entity);
             }
-            // for (int i = 0; i < heroesPerPlayer; i++)
+            var myHeroes = CurrentState.Entities.Where(p => p.Type == EntityType.MyHero).ToList();
+            var monsters = CurrentState.Entities.Where(p => p.Type == EntityType.Monster).ToList();
+            // foreach (var monster in monsters)
             // {
-
-            //     // Write an action using Console.WriteLine()
-            //     // To debug: Console.Error.WriteLine("Debug messages...");
-
-
-            //     // In the first league: MOVE <x> <y> | WAIT; In later leagues: | SPELL <spellParams>;
-            //     Console.WriteLine("MOVE 5000 1000");
+            //     Console.Error.WriteLine(monster.Id);
             // }
-            Console.WriteLine("MOVE 5000 1000");
-            Console.WriteLine("MOVE 2000 2000");
-            Console.WriteLine("MOVE 1500 4000");
+            foreach (var myHero in myHeroes)
+            {
+                Console.Error.WriteLine(myHero.Id);
+                if (!monsters.Any())
+                {
+                    Console.WriteLine($"WAIT");
+                    continue;
+                }
+                var closestMonster = monsters
+                    .OrderBy(p => p.Position.GetDistance(myHero.Position))
+                    .First();
+
+                var x = closestMonster.Position.X;
+                var y = closestMonster.Position.Y;
+                
+                Console.WriteLine($"MOVE {x} {y}");
+            }
+            // Console.WriteLine("MOVE 5000 1000");
+            // Console.WriteLine("MOVE 2000 2000");
+            // Console.WriteLine("MOVE 1500 4000");
         }
     }
 
@@ -102,6 +115,10 @@ class Player
         public Point(int x, int y) => (X, Y) = (x, y);
         public int X { get; set; }
         public int Y { get; set; }
+        public double GetDistance(Point anotherPoint)
+        {
+            return Math.Sqrt((anotherPoint.X - X) * (anotherPoint.X - X) + (anotherPoint.Y - Y) * (anotherPoint.Y - Y));
+        }
     }
     
     public enum EntityType
