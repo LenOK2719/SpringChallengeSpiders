@@ -91,15 +91,15 @@ class Player
             List<Point> startPoints = new List<Point>();
             if (MyBase.IsLeft)
             {
-                startPoints.Add(new Point(5000, 1000));
-                startPoints.Add(new Point(4100, 3000));
-                startPoints.Add(new Point(2500, 4700));
+                startPoints.Add(new Point(5500, 1500));
+                startPoints.Add(new Point(4800, 3400));
+                startPoints.Add(new Point(3000, 4600));
             }
             else
             {
-                startPoints.Add(new Point(14300, 8300));
-                startPoints.Add(new Point(15200, 6000));
-                startPoints.Add(new Point(16800, 5800));
+                startPoints.Add(new Point(12300, 7700));
+                startPoints.Add(new Point(13200, 5500));
+                startPoints.Add(new Point(15100, 4200));
             }
 
             for (var i = 0; i < myHeroes.Count; i++)
@@ -114,7 +114,6 @@ class Player
                 if (!monsters.Any())
                 {
                     Console.Error.WriteLine($"turn {Turn}");
-                    Console.Error.WriteLine(myHero.StartPoint.X);
                     Console.WriteLine($"MOVE {myHero.StartPoint.X} {myHero.StartPoint.Y}");
                     continue;
                 }
@@ -122,28 +121,46 @@ class Player
                 var closestOpponent = opponents
                     .OrderBy(p => p.Position.GetDistance(myHero.Position))
                     .FirstOrDefault();
-                // Console.Error.WriteLine(closestOpponent?.Position.GetDistance(myHero.Position));
-                // Console.Error.WriteLine(CurrentState.MyMana);
-                if (closestOpponent != null && closestOpponent.Position.GetDistance(myHero.Position) <= 2200 &&
-                    CurrentState.MyMana > 20 && myHero.ShieldLife == 0)
-                {
-                    Console.WriteLine($"SPELL SHIELD {myHero.Id}");
-                    continue;
-                }
+                
+                // if (closestOpponent != null && closestOpponent.Position.GetDistance(myHero.Position) <= 2200 &&
+                //     CurrentState.MyMana > 20 && myHero.ShieldLife == 0)
+                // {
+                //     Console.WriteLine($"SPELL SHIELD {myHero.Id}");
+                //     continue;
+                // }
 
-                if (myHero.IsControlled && CurrentState.MyMana > 20)
-                {
-                    Console.WriteLine($"SPELL SHIELD {myHero.Id}");
-                    continue;
-                }
+                // if (myHero.IsControlled && CurrentState.MyMana > 20)
+                // {
+                //     Console.WriteLine($"SPELL SHIELD {myHero.Id}");
+                //     continue;
+                // }
 
                 var selectedMonster = monsters
                     .Where(p => p.TargetsMyBase)
                     .OrderBy(p => p.Position.GetDistance(MyBase.Position))
                     .FirstOrDefault(p => p.TargetsMyBase);
+                
+                if (selectedMonster != null && selectedMonster.Position.GetDistance(myHero.Position) <= 1280 && CurrentState.MyMana > 20 && selectedMonster.Position.GetDistance(MyBase.Position) < 900)
+                {
+                    Console.WriteLine(
+                        $"SPELL WIND {OpponentsBase.Position.X} {OpponentsBase.Position.Y}");
+                    continue;
+                }
+                
+                if (selectedMonster != null && selectedMonster.Position.GetDistance(myHero.Position) <= 1280 && CurrentState.MyMana > 20 && selectedMonster.Position.GetDistance(MyBase.Position) > myHero.Position.GetDistance(MyBase.Position) - 1280)
+                {
+                    Console.WriteLine(
+                        $"SPELL WIND {OpponentsBase.Position.X} {OpponentsBase.Position.Y}");
+                    continue;
+                }
 
                 if (selectedMonster == null)
                 {
+                    if (myHero.Position.GetDistance(MyBase.Position) > 8000)
+                    {
+                        Console.WriteLine($"MOVE {myHero.StartPoint.X} {myHero.StartPoint.Y}");
+                        continue;
+                    }
                     if (monsters.Count > EntitiesControlledByMe.Count)
                     {
                         selectedMonster = monsters
@@ -161,13 +178,17 @@ class Player
                     }
 
 
-                    if (myHero.Id == 0 && selectedMonster.Position.GetDistance(myHero.Position) <= 2200 &&
+                    var monsterDistanceToHero = selectedMonster.Position.GetDistance(myHero.Position);
+                    var monsterDistanceToBase = selectedMonster.Position.GetDistance(MyBase.Position);
+                    var myHeroDistanceToBase = myHero.Position.GetDistance(MyBase.Position);
+
+                    if ((myHero.Id == 0  || myHero.Id == 3) && monsterDistanceToHero <= 2200 &&
                         CurrentState.MyMana > 20)
                     {
-                        Console.WriteLine(
-                            $"SPELL CONTROL {selectedMonster.Id} {OpponentsBase.Position.X} {OpponentsBase.Position.Y}");
-                        EntitiesControlledByMe.Add(selectedMonster.Id);
-                        continue;
+                        // Console.WriteLine(
+                        //     $"SPELL CONTROL {selectedMonster.Id} {OpponentsBase.Position.X} {OpponentsBase.Position.Y}");
+                        // EntitiesControlledByMe.Add(selectedMonster.Id);
+                        // continue;
                     }
                 }
                 // else
