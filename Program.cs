@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Security.AccessControl;
 
 /**
@@ -13,8 +14,11 @@ using System.Security.AccessControl;
 class Player
 {
     private static Base MyBase;
+    private static Base OpponentsBase;
     private static int HeroesPerPlayer;
     private static State CurrentState;
+    private static int Turn;
+    private static List<int> EntitiesControlledByMe = new List<int>();
 
     static void Main(string[] args)
     {
@@ -22,22 +26,30 @@ class Player
         MyBase = new Base
         {
             IsMine = true,
-            Position = new Point(int.Parse(inputs[0]), int.Parse(inputs[1]))
+            Position = new Point(int.Parse(inputs[0]), int.Parse(inputs[1])),
+            IsLeft = int.Parse(inputs[0]) < 8800
         };
-        var startPointX = MyBase.Position.X > 8800 ? MyBase.Position.X - 1000 : MyBase.Position.X + 1000;
-        var startPointY = MyBase.Position.Y > 4400 ? MyBase.Position.Y - 1700 : MyBase.Position.Y + 1700;
-        MyBase.StartPoint = new Point(startPointX, startPointY);
+        OpponentsBase = new Base()
+        {
+            IsMine = false,
+            Position = MyBase.IsLeft ? new Point(17630, 9000) : new Point(0, 0),
+            IsLeft = !MyBase.IsLeft
+        };
+        // var startPointX = MyBase.Position.X > 8800 ? MyBase.Position.X - 1000 : MyBase.Position.X + 1000;
+        // var startPointY = MyBase.Position.Y > 4400 ? MyBase.Position.Y - 1700 : MyBase.Position.Y + 1700;
+        // MyBase.StartPoint = new Point(startPointX, startPointY);
 
         HeroesPerPlayer = int.Parse(Console.ReadLine()); // Always 3
 
         // game loop
         while (true)
         {
+            Turn++;
             CurrentState = new State();
             inputs = Console.ReadLine()!.Split(' ');
             CurrentState.MyHealth = int.Parse(inputs[0]); // Your base health
             CurrentState.MyMana = int.Parse(inputs[1]); // Ignore in the first league; Spend ten mana to cast a spell
-            
+
             inputs = Console.ReadLine()!.Split(' ');
             CurrentState.OpponentHealth = int.Parse(inputs[0]);
             CurrentState.OpponentMana = int.Parse(inputs[1]);
@@ -72,33 +84,48 @@ class Player
             var monsters = CurrentState.Entities.Where(p => p.Type == EntityType.Monster).ToList();
             var opponents = CurrentState.Entities.Where(p => p.Type == EntityType.OpponentHero).ToList();
 
+            if (Turn == 1)
+            {
+            }
+
+            List<Point> startPoints = new List<Point>();
+            if (MyBase.IsLeft)
+            {
+                startPoints.Add(new Point(5000, 1000));
+                startPoints.Add(new Point(4100, 3000));
+                startPoints.Add(new Point(2500, 4700));
+            }
+            else
+            {
+                startPoints.Add(new Point(14300, 8300));
+                startPoints.Add(new Point(15200, 6000));
+                startPoints.Add(new Point(16800, 5800));
+            }
+
+            for (var i = 0; i < myHeroes.Count; i++)
+            {
+                myHeroes[i].StartPoint = startPoints[i];
+                Console.Error.WriteLine(myHeroes[i].StartPoint.X);
+            }
+
+
             foreach (var myHero in myHeroes)
             {
                 if (!monsters.Any())
                 {
-                    if (MyBase.Position.X > 8800 && MyBase.Position.Y > 4400)
-                    {
-                        Console.WriteLine($"MOVE 14300 8300");
-                        Console.WriteLine($"MOVE 15200 6000");
-                        Console.WriteLine($"MOVE 16800 5800");
-                    }
-                    else
-                    {
-                        Console.WriteLine("MOVE 5000 1000");
-                        Console.WriteLine("MOVE 4100 3000");
-                        Console.WriteLine("MOVE 1500 4000");
-                    }
-
-                    break;
+                    Console.Error.WriteLine($"turn {Turn}");
+                    Console.Error.WriteLine(myHero.StartPoint.X);
+                    Console.WriteLine($"MOVE {myHero.StartPoint.X} {myHero.StartPoint.Y}");
+                    continue;
                 }
 
                 var closestOpponent = opponents
                     .OrderBy(p => p.Position.GetDistance(myHero.Position))
                     .FirstOrDefault();
-                Console.Error.WriteLine(closestOpponent?.Position.GetDistance(myHero.Position));
-                Console.Error.WriteLine(CurrentState.MyMana);
+                // Console.Error.WriteLine(closestOpponent?.Position.GetDistance(myHero.Position));
+                // Console.Error.WriteLine(CurrentState.MyMana);
                 if (closestOpponent != null && closestOpponent.Position.GetDistance(myHero.Position) <= 2200 &&
-                    CurrentState.MyMana > 20)
+                    CurrentState.MyMana > 20 && myHero.ShieldLife == 0)
                 {
                     Console.WriteLine($"SPELL SHIELD {myHero.Id}");
                     continue;
@@ -114,13 +141,49 @@ class Player
                     .Where(p => p.TargetsMyBase)
                     .OrderBy(p => p.Position.GetDistance(MyBase.Position))
                     .FirstOrDefault(p => p.TargetsMyBase);
+
                 if (selectedMonster == null)
                 {
-                    selectedMonster = monsters
-                        .OrderBy(p => p.TargetsMyBase)
-                        .ThenBy(p => p.Position.GetDistance(myHero.Position))
-                        .First();
+                    if (monsters.Count > EntitiesControlledByMe.Count)
+                    {
+                        selectedMonster = monsters
+                            .Where(p => !EntitiesControlledByMe.Contains(p.Id))
+                            .OrderBy(p => p.TargetsMyBase)
+                            .ThenBy(p => p.Position.GetDistance(myHero.Position))
+                            .First();
+                    }
+                    else
+                    {
+                        selectedMonster = monsters
+                            .OrderBy(p => p.TargetsMyBase)
+                            .ThenBy(p => p.Position.GetDistance(myHero.Position))
+                            .First();
+                    }
+
+
+                    if (myHero.Id == 0 && selectedMonster.Position.GetDistance(myHero.Position) <= 2200 &&
+                        CurrentState.MyMana > 20)
+                    {
+                        Console.WriteLine(
+                            $"SPELL CONTROL {selectedMonster.Id} {OpponentsBase.Position.X} {OpponentsBase.Position.Y}");
+                        EntitiesControlledByMe.Add(selectedMonster.Id);
+                        continue;
+                    }
                 }
+                // else
+                // {
+                //     var monsterDistanceToHero = selectedMonster.Position.GetDistance(myHero.Position);
+                //     var monsterDistanceToBase = selectedMonster.Position.GetDistance(MyBase.Position);
+                //     var myHeroDistanceToBase = myHero.Position.GetDistance(MyBase.Position);
+                //
+                //     if (monsterDistanceToHero <= 2200 && monsterDistanceToBase < myHeroDistanceToBase &&
+                //         CurrentState.MyMana > 20)
+                //     {
+                //         Console.WriteLine(
+                //             $"SPELL CONTROL {selectedMonster.Id} {OpponentsBase.Position.X} {OpponentsBase.Position.Y}");
+                //         continue;
+                //     }
+                // }
 
                 var x = selectedMonster.Position.X;
                 var y = selectedMonster.Position.Y;
@@ -147,6 +210,7 @@ class Player
     class Base : Entity
     {
         public bool IsMine { get; set; }
+        public bool IsLeft { get; set; }
     }
 
     class Entity
